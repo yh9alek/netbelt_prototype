@@ -13,7 +13,7 @@
 MPU6050 mpu;
 
 // Token de autenticación de Firebase
-#define ACCESS_TOKEN "ya29.c.c0ASRK0Gb_RRHYZOt_cSvZt7oTHXlYQ6KmsW1aGXHL7lpKuqqBhYDmRqchp06Yap7h5abqZLQDupxMZJYlDuMbMM0NYS19HJXRtuVF12UitK16-2McicM-LFmSs_rLkCcVlE9ESHpnchVQMwqLgSWosHv1LrS69ZMf8EWIQNhKJQT3wQgEQ7KKKjqIG6djeJYOkBCU7pZquSooN_H5q4qdoK5GrFNpRakNCav4BJ835QauEoqLUysDZcTNXUTzDmh1WfZcMQwu-KmoOFbIGROXLiSOY4Wxu_GWHQngLccoNAIz0mdbNbn8-ioAuVRrcvPsPBfcD04Gap5OOvoC4uUywAsCBmPbf13-1yfMuNU-JCq9vQPXAw7TAGuQT385Kwk5BJ6yS_1O6rVgWIptSbVSlt3SB5eQvdIh7yVq1M6Vzx_unmSqYuir3FiWdgpeI2z59yVjtYFXvmJIr9y4UqiXRgum4cwr3zUVaosemqwdQg64ilxviyRVlUXJaIIe-BWBzV_y3BWci9vSV-qIv0b1Whk4jn-z7RmQhpiplQp-setIxzxspiv-Ju5eFZo6reh57gmdZbXMtv-1rh8qdYVoBysm1WRMYcx6Rf95WzRaM1cF2ZOyUt7moFjkeRrIJce2hlOda8nOcMt53lrm23t49hdYgZjXjzMyp9mqx0IQqa7OhU3VBI1lY0vnkigFX71fZny_t4-IJwv-WMwWWkR3Rh6Wtc8JMzeQmnSa5hn66sngjISWk13Wo3gtzweWd815ZBIj0udVcinfJY09x24B6WZa9xo99_Q9Qvpf9B5fVXwZeuz9y0iw9BZ1XOs0I63b2zUYctFxg2pdpasXo-0X3npUqqXVZlrbZcIy4s_O_6fzkiOcVRxnezcurvfy6Z8t04V9mBRfb6W-a52V6998Wedi8BFrz5Vi5BIb09fBMF2p8Qt_tmbdglIWJ9-nyJg6VQIY-YqM07sBv9tyO_5Vy8WBxuVstih3hwFFy2I7eQ6wQ5aWW9QZ5YM"
+#define ACCESS_TOKEN "ya29.c.c0ASRK0GbSZaxLaKX0MmZiBe4VoX3ByKQ2TU99UktOk5PAKJOxG2hsk_nPMrlP7IyAzlfzyLlG5YMHi0snERpQiH4PUIx8koSbzYBwjPBujRJuTrHcYHXvslmeOMHpWSK_Ykbg46Wq2Zo-RdiTYdr_hGi34W_ToUsJnwWM8oYMjosUxkRJDGDycKMArlKIwItMwwKI11IGigvKFdLEfu0mfP8Rr-mx-pbgvb2uPkm-A1axdrEvy_dazqPqJ6Jl_DrfEv54R7bKq0llLvUjTh3JEQzbFDC65fYcaCW3qHatVCtxyFPLceIKqfjmkk2b5rdyBpaFlSjv-9oDlr7dA3BWFhNfxb7On-z1A8Kk7Z1iXU5EEDUxzt2yHQzSG385KW_Y4ZdZg4q02xSg7-9QIB7kB3SxI_etrZfpV59X8614Fu8ilV9xu1SuIU9Rzpr5W5RkBJQFpaXj13j-O49kt9vkijOwpvqaX2iuhJSc5Vz8RoFwQ-2lIXlgiJ6sRJJwmFv56tWf9-vFJeVZ26djn3_X7Xes_uux_QqoiFsIqdIzWu2RgUi1unvdqitgzhlpf4uJa7X-le81bRfUxm7-iVVMXv53pJjclrz7q1t7suc8jecoUW2MkirIsn-k_JaO51pfItpMdul19z2SFSahitImyUe1evw6qb7qf7puVOplM6I5Qi4eVdU6bbZ9fQmuM4SjeJr_w4_BlpXpO3X8Ozv4M6ox56aunsa1adQZxmFnUktoX1MVMWq58uoZhQX_t8Wrvyd2y7Fsb1UgQ7-3teriI2QVsFc-O05kM84f2_tjjiFsiMfZpl8yrrM_y7pJ2M3sMbzxnOZ3kd5-1-6QqVlvS2cyszv09f_kWu9u4BBfXS5hVfcq1umctjjf1bB1Vgh-WhFrS-pc3Uzins52SmaW4dWWVr5ac1tQ1cQ3QeyS22J2IR0QzR8p8O_OX3daphUbtSwueblrXBkUVz3myQRa4QZ80xiQ6Xy9SVZx2g_Si-sZixVn7bd-IMp"
 
 // Token del dispositivo receptor
 const char* registrationToken = "dObTAIwGS8-HCVZIfpyT9Z:APA91bE3aHxi17XWN8tnRWp-cVg_17mkNifSRtz1k9ksG_4R8ahBb7eBB8Oja6SdqLyyTCL-eYExE5IXrPaKDlO1d9rTXGITu7VSp3_6xrqGhiAzo8fHrYXBOqL3TS9QuVPOWbU_hlUp";
@@ -31,7 +31,7 @@ float ax_2g, ay_2g, az_2g, gx_250_deg, gy_250_deg, gz_250_deg;
 float a_abs, g_abs, ang_x, ang_y;
 
 // UMBRAL DE ACELERACIÓN
-float umbral_de_aceleracion = 2.0;
+float umbral_de_aceleracion = 3.0;
 
 void conexion() {
   // Conecta a la red WiFi
@@ -60,18 +60,14 @@ void sendFCMNotification() {
     return;
   }
 
-  // Construye el payload de la notificación
-  String payload = 
+  // Crear el payload JSON
+  String payload =  
     "{"
     "\"message\": {"
     "\"token\": \"" + String(registrationToken) + "\","
-    "\"notification\": {"
+    "\"data\": {"
     "\"title\": \"ALERTA!\","
     "\"body\": \"EL DISPOSITIVO HA DETECTADO UNA CAÍDA\""
-    "},"
-    "\"data\": {"
-    "\"key1\": \"value1\","
-    "\"key2\": \"value2\""
     "}"
     "}"
     "}";
@@ -107,7 +103,9 @@ void detectarCaida() {
     Serial.println("Posible caída detectada!");
 
     // Aquí podrías activar una acción, como enviar una notificación
-    //digitalWrite(BUZZER_PIN, HIGH);
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(500);
+    digitalWrite(BUZZER_PIN, LOW);
     sendFCMNotification();
   }
 }
@@ -180,7 +178,6 @@ void setup() {
   // Verificar la conexión
   Serial.println(mpu.testConnection() ? "MPU6050 conectado correctamente" : "Error al conectar el MPU6050");
   conexion();
-  sendFCMNotification();
 }
 
 void loop() {
