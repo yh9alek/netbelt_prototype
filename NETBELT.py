@@ -13,9 +13,6 @@ import uhashlib
 ssid = 'Base Secreta'
 password = 'yGD3Um3Jxj'
 
-# Token del dispositivo receptor
-registrationToken = "dObTAIwGS8-HCVZIfpyT9Z:APA91bE3aHxi17XWN8tnRWp-cVg_17mkNifSRtz1k9ksG_4R8ahBb7eBB8Oja6SdqLyyTCL-eYExE5IXrPa"
-
 # UMBRAL DE ACELERACIÓN
 umbral_de_aceleracion = 3.0
 
@@ -66,65 +63,44 @@ def ntp_sync():
         print("Failed to sync time:", e)
         return None
 
-# Crear JWT
-def hmac_sha256(key, msg):
-    h = uhashlib.sha256()
-    h.update(key + msg)
-    return h.digest()
-
-def create_jwt():
-    header = {"alg": "RS256", "typ": "JWT"}
-    now = ntp_sync()
-    if now is None:
-        return None
-    
-    now = int(now) + 946684800
-    print("Current time (iat):", now)
-    print("Expiration time (exp):", now + 3600)
-    
-    payload = {
-        "iss": service_account_info["client_email"],
-        "scope": "https://www.googleapis.com/auth/firebase.messaging",
-        "aud": service_account_info["token_uri"],
-        "iat": now,
-        "exp": now + 3600
-    }
-    to_sign = (
-        ubinascii.b2a_base64(json.dumps(header).encode()).decode().rstrip("\n=") + "." +
-        ubinascii.b2a_base64(json.dumps(payload).encode()).decode().rstrip("\n=")
-    ).replace("+", "-").replace("/", "_")
-    
-    private_key_b64 = ubinascii.a2b_base64(service_account_info["private_key"].replace("-----BEGIN PRIVATE KEY-----\n", "").replace("-----END PRIVATE KEY-----\n", "").replace("\n", ""))
-    signed = hmac_sha256(private_key_b64, to_sign.encode())
-    signature_b64 = ubinascii.b2a_base64(signed).decode().rstrip("\n=").replace('+', '-').replace('/', '_')
-    return to_sign + "." + signature_b64
-
-# Obtener el token de acceso
+# Obtener el token de acceso desde el servidor
 def get_access_token():
-    jwt = create_jwt()
-    if jwt is None:
-        print("Failed to create JWT")
+    try:
+        response = requests.get('http://yohan949.pythonanywhere.com/get_token')
+        if response.status_code == 200:
+            token = response.json().get('access_token')
+            print("Access token obtained:", token)
+            return token
+        else:
+            print("Failed to obtain access token, status code:", response.status_code)
+            print("Response:", response.text)
+            return None
+    except Exception as e:
+        print("Exception occurred while obtaining access token:", e)
         return None
-    
-    token_url = 'https://oauth2.googleapis.com/token'
-    token_req_payload = 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + jwt
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-    response = requests.post(token_url, data=token_req_payload.encode('utf-8'), headers=headers)
-    
-    print("Token response status:", response.status_code)
-    print("Token response:", response.text)
-    
-    if response.status_code == 200:
-        return response.json().get('access_token')
-    else:
-        print("Failed to obtain access token")
+
+# Obtener el token de registro FCM desde el servidor
+def get_registration_token():
+    try:
+        response = requests.get('http://tu-servidor.com/get_registration_token')
+        if response.status_code == 200:
+            token = response.json().get('registration_token')
+            print("Registration token obtained:", token)
+            return token
+        else:
+            print("Failed to obtain registration token, status code:", response.status_code)
+            print("Response:", response.text)
+            return None
+    except Exception as e:
+        print("Exception occurred while obtaining registration token:", e)
         return None
 
 # Enviar notificación a Firebase Cloud Messaging
 def send_fcm_notification():
     access_token = get_access_token()
-    if not access_token:
-        print("Failed to obtain access token")
+    registration_token = get_registration_token()
+    if not access_token or not registration_token:
+        print("Failed to obtain access token or registration token")
         return
     
     url = "https://fcm.googleapis.com/v1/projects/netbelt-472e1/messages:send"
@@ -134,7 +110,7 @@ def send_fcm_notification():
     }
     payload = {
         "message": {
-            "token": registrationToken,
+            "token": registration_token,
             "data": {
                 "title": "ALERTA!",
                 "body": "EL DISPOSITIVO HA DETECTADO UNA CAÍDA"
@@ -162,6 +138,7 @@ def detectar_caida():
 def setup():
     buzzer.off()
     conexion()
+    send_fcm_notification()
 
 # Ejecutar el programa
 def loop():
@@ -170,4 +147,4 @@ def loop():
         time.sleep(0.1)
 
 setup()
-loop()
+#loop()
