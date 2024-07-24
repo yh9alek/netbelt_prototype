@@ -1,14 +1,23 @@
+#include <Arduino.h>
+#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <Wire.h>
 #include <I2Cdev.h>
 #include <MPU6050.h>
+#include <FirebaseESP8266.h>
 
 #define MPU 0x68
 #define BUZZER_PIN 16
 
 MPU6050 mpu;
+
+FirebaseData firebaseData;
+FirebaseConfig firebaseConfig;
+FirebaseAuth firebaseAuth;
+
+WiFiClient client;
 
 const char* token_url = "https://yohan949.pythonanywhere.com/get_token";
 
@@ -41,6 +50,35 @@ void conexion() {
   Serial.println("WiFi conectado.");
   Serial.print("Dirección IP: ");
   Serial.println(WiFi.localIP());
+
+  // Configura Firebase
+  firebaseConfig.database_url = "https://esp8266-backend-default-rtdb.firebaseio.com/";
+  Firebase.reconnectWiFi(true);
+}
+
+void actualizarEstadoFirebase(bool estado) {
+  String path = "/estado";
+  if (Firebase.setBool(firebaseData, path, estado)) {
+    Serial.println("Estado actualizado en Firebase");
+  } else {
+    Serial.print("Error al actualizar estado: ");
+    Serial.println(firebaseData.errorReason());
+  }
+}
+
+void autenticarFirebase() {
+  String accessToken = getAccessToken();
+  if (accessToken != "") {
+    firebaseConfig.signer.tokens.legacy_token = accessToken.c_str();
+    Firebase.begin(&firebaseConfig, &firebaseAuth);
+    if (Firebase.ready()) {
+      Serial.println("Autenticación con Firebase exitosa");
+    } else {
+      Serial.println("Error en la autenticación con Firebase");
+    }
+  } else {
+    Serial.println("No se pudo obtener el token de acceso");
+  }
 }
 
 String getAccessToken() {
@@ -113,7 +151,7 @@ void sendFCMNotification(String accessToken) {
     payload;
 
   Serial.println("Request: " + request);
-
+  digitalWrite(LED_ESP8266, LOW);
   client.print(request);
 
   while (client.connected()) {
@@ -137,6 +175,7 @@ void detectarCaida() {
     String accessToken = getAccessToken();
     Serial.print("Obtained Access Token: " + accessToken);
     sendFCMNotification(accessToken);
+    digitalWrite(LED_ESP8266, HIGH);
   }
 }
 
@@ -190,6 +229,7 @@ void setup() {
   Wire.begin(D2, D1);
 
   pinMode(LED_ESP8266, OUTPUT);
+  digitalWrite(LED_ESP8266, HIGH);
   pinMode(BUZZER_PIN, OUTPUT);
 
   Serial.println("Inicializando el MPU-6050...");
@@ -197,6 +237,7 @@ void setup() {
 
   Serial.println(mpu.testConnection() ? "MPU6050 conectado correctamente" : "Error al conectar el MPU6050");
   conexion();
+  autenticarFirebase();
 }
 
 void loop() {
