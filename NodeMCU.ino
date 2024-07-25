@@ -1,10 +1,8 @@
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <Wire.h>
-#include <I2Cdev.h>
 #include <MPU6050.h>
 #include <FirebaseESP8266.h>
 
@@ -17,8 +15,6 @@ FirebaseData firebaseData;
 FirebaseConfig firebaseConfig;
 FirebaseAuth firebaseAuth;
 
-WiFiClient client;
-
 const char* token_url = "https://yohan949.pythonanywhere.com/get_token";
 
 // Token del dispositivo receptor
@@ -28,31 +24,38 @@ const char* ssid = "Base Secreta";
 const char* password = "yGD3Um3Jxj";
 
 int LED_ESP8266 = 2;
-int D2 = 4, D1 = 5, D3 = 0;
+int D2 = 4, D1 = 5, PULSADOR = 0;
+int buttonState;
+int lastButtonState = LOW;
 
 int16_t ax, ay, az, gx, gy, gz;
-float ax_2g, ay_2g, az_2g, gx_250_deg, gy_250_deg, gz_250_deg;
-float a_abs, g_abs, ang_x, ang_y;
+float ax_2g, ay_2g, az_2g;
+float a_abs;
 
 float umbral_de_aceleracion = 3.0;
 
+boolean seCayo = false;
+
 void conexion() {
-  Serial.println();
   Serial.println("Conectando a la red WiFi...");
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    digitalWrite(BUZZER_PIN, HIGH);
+    digitalWrite(LED_ESP8266, LOW);
+    delay(300);
+    digitalWrite(BUZZER_PIN, LOW);
+    digitalWrite(LED_ESP8266, HIGH);
     Serial.print(".");
+    delay(300);
   }
 
-  Serial.println();
-  Serial.println("WiFi conectado.");
+  Serial.println("\nWiFi conectado.");
   Serial.print("Dirección IP: ");
   Serial.println(WiFi.localIP());
 
   // Configura Firebase
-  firebaseConfig.database_url = "https://esp8266-backend-default-rtdb.firebaseio.com/";
+  firebaseConfig.database_url = "https://netbelt-472e1-default-rtdb.firebaseio.com/";
   Firebase.reconnectWiFi(true);
 }
 
@@ -85,7 +88,7 @@ String getAccessToken() {
   WiFiClientSecure client;
   HTTPClient http;
 
-  client.setInsecure(); // Solo para pruebas. Remover en producción.
+  client.setInsecure(); // Solo para pruebas. 
   
   Serial.println("Fetching access token...");
   if (http.begin(client, token_url)) {
@@ -97,7 +100,7 @@ String getAccessToken() {
         int endIndex = payload.indexOf("\"", startIndex);
         String accessToken = payload.substring(startIndex, endIndex);
         Serial.println("Access token obtained: " + accessToken);
-        http.end();
+        http.end(); // Termina la conexión actual
         return accessToken;
       } else {
         Serial.printf("HTTP GET failed with code: %d\n", httpCode);
@@ -105,14 +108,14 @@ String getAccessToken() {
     } else {
       Serial.printf("HTTP GET failed, error: %s\n", http.errorToString(httpCode).c_str());
     }
-    http.end();
+    http.end(); // Asegura que cualquier conexión abierta se cierra
   } else {
     Serial.println("Unable to connect to token URL");
   }
   return "";
 }
 
-void sendFCMNotification(String accessToken) {
+void sendFCMNotification(const String& accessToken) {
   WiFiClientSecure client;
   client.setInsecure();
 
@@ -129,7 +132,7 @@ void sendFCMNotification(String accessToken) {
   Serial.println("Access token being used: " + accessToken);
   Serial.println("Registration token being used: " + String(registrationToken));
 
-  String payload =  
+  String payload = 
     "{"
     "\"message\": {"
     "\"token\": \"" + String(registrationToken) + "\","
@@ -140,8 +143,6 @@ void sendFCMNotification(String accessToken) {
     "}"
     "}";
 
-  Serial.println("Payload: " + payload);
-
   String request = 
     String("POST ") + "/v1/projects/netbelt-472e1/messages:send HTTP/1.1\r\n" +
     "Host: fcm.googleapis.com\r\n" +
@@ -150,7 +151,6 @@ void sendFCMNotification(String accessToken) {
     "Content-Length: " + payload.length() + "\r\n\r\n" +
     payload;
 
-  Serial.println("Request: " + request);
   digitalWrite(LED_ESP8266, LOW);
   client.print(request);
 
@@ -166,6 +166,18 @@ void sendFCMNotification(String accessToken) {
   Serial.println(response);
 }
 
+void pulsador() {
+  buttonState = digitalRead(PULSADOR);
+  if (buttonState == LOW && lastButtonState == HIGH) {
+    Serial.println("Pulsador presionado!");
+    actualizarEstadoFirebase(false);
+    seCayo = false;
+    digitalWrite(LED_ESP8266, HIGH);
+    ESP.restart(); // Reiniciar el ESP8266
+  }
+  lastButtonState = buttonState;
+}
+
 void detectarCaida() {
   if (a_abs > umbral_de_aceleracion) {
     Serial.println("Posible caída detectada!");
@@ -175,7 +187,8 @@ void detectarCaida() {
     String accessToken = getAccessToken();
     Serial.print("Obtained Access Token: " + accessToken);
     sendFCMNotification(accessToken);
-    digitalWrite(LED_ESP8266, HIGH);
+    actualizarEstadoFirebase(true);
+    seCayo = true;
   }
 }
 
@@ -183,15 +196,8 @@ void calculos() {
   ax_2g = ax / 16384.0;
   ay_2g = ay / 16384.0;
   az_2g = az / 16384.0;
-  gx_250_deg = gx / 131.07;
-  gy_250_deg = gy / 131.07;
-  gz_250_deg = gz / 131.07;
 
-  a_abs = pow(pow(ax_2g, 2) + pow(ay_2g, 2) + pow(az_2g, 2), 0.5);
-  g_abs = sqrt(pow(gx_250_deg, 2) + pow(gy_250_deg, 2) + pow(gz_250_deg, 2));
-  
-  ang_x = atan(ax / sqrt(pow(ay, 2) + pow(az, 2))) * (180.0 / 3.14);
-  ang_y = atan(ay / sqrt(pow(ax, 2) + pow(az, 2))) * (180.0 / 3.14);
+  a_abs = sqrt(ax_2g * ax_2g + ay_2g * ay_2g + az_2g * az_2g);
 }
 
 void leerDatosMPU6050() {
@@ -199,28 +205,11 @@ void leerDatosMPU6050() {
   calculos();
 
   Serial.println("");
-  Serial.print("Acelerometro: ");
-  Serial.print("X = "); Serial.print(ax);
+  Serial.print("Acelerometro: X = "); Serial.print(ax);
   Serial.print(" | Y = "); Serial.print(ay);
   Serial.print(" | Z = "); Serial.println(az);
 
-  Serial.print("Giroscopio: ");
-  Serial.print("X = "); Serial.print(gx);
-  Serial.print(" | Y = "); Serial.print(gy);
-  Serial.print(" | Z = "); Serial.println(gz);
-
-  Serial.print("Aceleracion total: ");
-  Serial.print(a_abs);
-
-  Serial.print("  Velocidad angular total: ");
-  Serial.println(g_abs);
-
-  Serial.print("Angulo X: ");
-  Serial.print(ang_x);
-
-  Serial.print("  Angulo Y: ");
-  Serial.println(ang_y);
-
+  Serial.print("Aceleracion total: "); Serial.println(a_abs);
   delay(100);
 }
 
@@ -231,16 +220,21 @@ void setup() {
   pinMode(LED_ESP8266, OUTPUT);
   digitalWrite(LED_ESP8266, HIGH);
   pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(PULSADOR, INPUT);
 
   Serial.println("Inicializando el MPU-6050...");
   mpu.initialize();
+  Serial.println(mpu.testConnection() ? "MPU6050 conectado correctamente" : "Error al conectar el MPU-6050");
 
-  Serial.println(mpu.testConnection() ? "MPU6050 conectado correctamente" : "Error al conectar el MPU6050");
   conexion();
   autenticarFirebase();
 }
 
 void loop() {
-  leerDatosMPU6050();
-  detectarCaida();
+  if(!seCayo) {
+    leerDatosMPU6050();
+    detectarCaida();
+  } else {
+    pulsador();
+  }
 }
